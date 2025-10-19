@@ -1,0 +1,15 @@
+com/paklog/wes/task/infrastructure/config/MongoConfigTest.class
+com/paklog/wes/task/adapter/rest/dto/DtoMappingTest.class
+com/paklog/wes/task/domain/valueobject/LocationTest.class
+com/paklog/wes/task/adapter/rest/TaskControllerTest.class
+com/paklog/wes/task/infrastructure/assignment/TaskAssignmentEngineTest.class
+com/paklog/wes/task/domain/aggregate/WorkTaskTest.class
+com/paklog/wes/task/domain/entity/TaskContextVariantsTest.class
+com/paklog/wes/task/adapter/rest/mapper/TaskContextMapperTest.class
+com/paklog/wes/task/infrastructure/assignment/TaskRecommendationTest.class
+com/paklog/wes/task/adapter/rest/MobileTaskControllerTest.class
+com/paklog/wes/task/application/service/TaskManagementServiceTest.class
+com/paklog/wes/task/domain/valueobject/TaskTypeTest.class
+com/paklog/wes/task/infrastructure/events/WaveEventHandlerTest.class
+com/paklog/wes/task/application/service/TaskManagementServiceIntegrationTest.class
+com/paklog/wes/task/domain/valueobject/TaskStatusTest.class

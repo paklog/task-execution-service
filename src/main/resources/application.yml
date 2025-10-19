@@ -1,0 +1,115 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: task-execution-service
+
+  # MongoDB Configuration
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/task_execution}
+      database: task_execution
+
+    # Redis Configuration
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: task-execution-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+
+  # Spring MVC Configuration
+  mvc:
+    contentnegotiation:
+      favor-parameter: false
+      favor-path-extension: false
+      media-types:
+        json: application/json
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.paklog.wes.task: DEBUG
+    org.springframework.kafka: WARN
+    org.mongodb.driver: WARN
+
+# Application-specific Configuration
+task:
+  assignment:
+    strategy: DISTANCE_BASED
+    auto-assign: true
+  queue:
+    starvation-prevention: true
+    aging-factor: 0.1
+
+# CloudEvents Configuration
+cloudevents:
+  kafka:
+    topic: wes-task-events
+    source: /wes/task-execution-service
+
+# PakLog Configuration
+paklog:
+  kafka:
+    topics:
+      wave-events: wms-wave-events
+      task-events: wes-task-events
+    consumer:
+      group-id: task-execution-service
+
+# Actuator Endpoints
+management:
+  endpoints:
+    web:
+      exposure:
+        include:
+          - health
+          - info
+          - metrics
+          - prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    mongo:
+      enabled: true
+    redis:
+      enabled: true
+    kafka:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+      environment: dev
+      service-type: wes
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      endpoint: http://localhost:4318/v1/traces
+
+# OpenAPI Documentation Configuration
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
