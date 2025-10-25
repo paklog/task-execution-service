@@ -31,7 +31,10 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
-@SpringBootTest(properties = "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration")
+@SpringBootTest(properties = {
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration"
+})
 class TaskManagementServiceIntegrationTest {
 
     @Container

@@ -47,20 +47,20 @@ class TaskAssignmentEngineTest {
     @Test
     void getNextTaskForWorkerReturnsEmptyWhenNoTaskAvailable() {
         Worker worker = worker("WORKER-1", Set.of(TaskType.PICK));
-        when(queueManager.dequeue(worker.workerId(), worker.warehouseId(), worker.currentZone(), worker.capabilities()))
+        when(queueManager.dequeue(worker.workerId(), worker.getWarehouseId(), worker.currentZone(), worker.capabilities()))
                 .thenReturn(Optional.empty());
 
         Optional<WorkTask> result = assignmentEngine.getNextTaskForWorker(worker);
 
         assertThat(result).isEmpty();
-        verify(queueManager).dequeue(worker.workerId(), worker.warehouseId(), worker.currentZone(), worker.capabilities());
+        verify(queueManager).dequeue(worker.workerId(), worker.getWarehouseId(), worker.currentZone(), worker.capabilities());
         verifyNoInteractions(taskService);
     }
 
     @Test
     void getNextTaskForWorkerAssignsDequeuedTask() {
         Worker worker = worker("WORKER-1", Set.of(TaskType.PICK));
-        when(queueManager.dequeue(worker.workerId(), worker.warehouseId(), worker.currentZone(), worker.capabilities()))
+        when(queueManager.dequeue(worker.workerId(), worker.getWarehouseId(), worker.currentZone(), worker.capabilities()))
                 .thenReturn(Optional.of(queuedTask.getTaskId()));
         when(taskService.assignTask(queuedTask.getTaskId(), worker.workerId()))
                 .thenReturn(queuedTask);
@@ -153,7 +153,7 @@ class TaskAssignmentEngineTest {
     @Test
     void getNextTaskReEnqueuesWhenAssignmentFails() {
         Worker worker = worker("WORKER-1", Set.of(TaskType.PICK));
-        when(queueManager.dequeue(worker.workerId(), worker.warehouseId(), worker.currentZone(), worker.capabilities()))
+        when(queueManager.dequeue(worker.workerId(), worker.getWarehouseId(), worker.currentZone(), worker.capabilities()))
                 .thenReturn(Optional.of(queuedTask.getTaskId()));
         when(taskService.assignTask(queuedTask.getTaskId(), worker.workerId()))
                 .thenThrow(new IllegalStateException("Cannot assign"));

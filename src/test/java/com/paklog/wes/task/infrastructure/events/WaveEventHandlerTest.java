@@ -54,7 +54,7 @@ class WaveEventHandlerTest {
         List<CreateTaskCommand> commands = commandCaptor.getAllValues();
         assertThat(commands)
                 .hasSize(2)
-                .allMatch(cmd -> cmd.type() == TaskType.PICK && cmd.warehouseId().equals("WH-1"));
+                .allMatch(cmd -> cmd.getType() == TaskType.PICK && cmd.getWarehouseId().equals("WH-1"));
         assertThat(commands.get(0).referenceId()).isEqualTo("WAVE-10");
         assertThat(commands.stream().map(CreateTaskCommand::context))
                 .allMatch(ctx -> ctx instanceof PickTaskContext);

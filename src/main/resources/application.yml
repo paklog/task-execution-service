@@ -58,15 +58,15 @@ task:
 # CloudEvents Configuration
 cloudevents:
   kafka:
-    topic: wes-task-events
+    topic: warehouse-execution.task-execution.events
     source: /wes/task-execution-service
 
 # PakLog Configuration
 paklog:
   kafka:
     topics:
-      wave-events: wms-wave-events
-      task-events: wes-task-events
+      wave-events: warehouse-execution.wave-planning.events
+      task-events: warehouse-execution.task-execution.events
     consumer:
       group-id: task-execution-service
 

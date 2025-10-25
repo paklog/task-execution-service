@@ -111,6 +111,8 @@ public class WaveEventHandler {
 
         } catch (Exception e) {
             logger.error("Error creating pick task for order {} in wave {}", orderId, waveId, e);
-        }
-    }
+        
+
+}
+}
 }

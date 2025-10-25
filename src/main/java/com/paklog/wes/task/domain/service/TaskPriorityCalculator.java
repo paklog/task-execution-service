@@ -1,7 +1,8 @@
 package com.paklog.wes.task.domain.service;
 
-import com.paklog.wes.task.domain.aggregate.Task;
-import com.paklog.wes.task.domain.valueobject.TaskPriority;
+import com.paklog.domain.valueobject.Priority;
+import com.paklog.wes.task.domain.aggregate.WorkTask;
+import com.paklog.wes.task.domain.entity.TaskContext;
 import com.paklog.wes.task.domain.valueobject.TaskType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,26 +10,29 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
- * Domain service for calculating dynamic task priority
- * Considers multiple factors: SLA, carrier cutoff, customer tier, zone efficiency
+ * Domain service for calculating dynamic task priority.
+ * Uses a weighted scoring model that blends SLA urgency, carrier cut-off,
+ * customer importance, zone efficiency and task age.
  */
 @Service
 public class TaskPriorityCalculator {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskPriorityCalculator.class);
 
-    // Base priority weights (total = 100)
     private static final int WEIGHT_SLA_URGENCY = 35;
     private static final int WEIGHT_CARRIER_CUTOFF = 30;
     private static final int WEIGHT_CUSTOMER_TIER = 20;
     private static final int WEIGHT_ZONE_EFFICIENCY = 10;
     private static final int WEIGHT_AGE = 5;
 
-    // Customer tier multipliers
     private static final Map<String, Double> CUSTOMER_TIER_MULTIPLIERS = Map.of(
             "PLATINUM", 2.0,
             "GOLD", 1.5,
@@ -37,237 +41,217 @@ public class TaskPriorityCalculator {
             "STANDARD", 0.8
     );
 
+    private static final DateTimeFormatter ISO_DATE_TIME = DateTimeFormatter.ISO_DATE_TIME;
+
     /**
-     * Calculate comprehensive priority score for a task
-     * Higher score = higher priority
+     * Calculate comprehensive priority score for a task. Higher score = higher priority.
      */
-    public int calculatePriority(Task task) {
+    public int calculatePriority(WorkTask task) {
         if (task == null) {
             throw new IllegalArgumentException("Task cannot be null");
         }
 
         int totalScore = 0;
 
-        // 1. SLA Urgency Score (35%)
         int slaScore = calculateSLAScore(task);
         totalScore += (slaScore * WEIGHT_SLA_URGENCY) / 100;
 
-        // 2. Carrier Cutoff Score (30%)
         int cutoffScore = calculateCutoffScore(task);
         totalScore += (cutoffScore * WEIGHT_CARRIER_CUTOFF) / 100;
 
-        // 3. Customer Tier Score (20%)
         int customerScore = calculateCustomerScore(task);
         totalScore += (customerScore * WEIGHT_CUSTOMER_TIER) / 100;
 
-        // 4. Zone Efficiency Score (10%)
         int zoneScore = calculateZoneScore(task);
         totalScore += (zoneScore * WEIGHT_ZONE_EFFICIENCY) / 100;
 
-        // 5. Age Score (5%)
         int ageScore = calculateAgeScore(task);
         totalScore += (ageScore * WEIGHT_AGE) / 100;
 
-        // Apply task type modifiers
         totalScore = applyTaskTypeModifier(totalScore, task.getType());
 
-        // Apply express/rush flags
-        if (task.isExpress()) {
+        if (isExpress(task)) {
             totalScore = (int) (totalScore * 1.5);
         }
 
-        // Ensure score is within bounds
+        totalScore = totalScore * 5;
         totalScore = Math.max(0, Math.min(1000, totalScore));
 
-        logger.debug("Calculated priority {} for task {} (SLA:{}, Cutoff:{}, Customer:{}, Zone:{}, Age:{})",
-                totalScore, task.getTaskId(), slaScore, cutoffScore, customerScore, zoneScore, ageScore);
+        logger.debug(
+                "Calculated priority {} for task {} (SLA:{}, Cutoff:{}, Customer:{}, Zone:{}, Age:{})",
+                totalScore,
+                task.getTaskId(),
+                slaScore,
+                cutoffScore,
+                customerScore,
+                zoneScore,
+                ageScore
+        );
 
         return totalScore;
     }
 
     /**
-     * Calculate priority based on TaskPriority enum and upgrade if needed
+     * Calculate priority ensuring it is never lower than a baseline Priority.
      */
-    public int calculatePriority(Task task, TaskPriority basePriority) {
+    public int calculatePriority(WorkTask task, Priority basePriority) {
         int calculatedScore = calculatePriority(task);
-        int baseScore = basePriority.getScore();
-
-        // Return higher of calculated or base priority
+        int baseScore = priorityToScore(basePriority);
         return Math.max(calculatedScore, baseScore);
     }
 
-    /**
-     * SLA Urgency Score - based on time remaining until deadline
-     */
-    private int calculateSLAScore(Task task) {
-        LocalDateTime deadline = task.getRequiredCompletionTime();
+    private int calculateSLAScore(WorkTask task) {
+        LocalDateTime deadline = task.getDeadline();
         if (deadline == null) {
-            return 50; // Default medium urgency
+            return 50;
         }
 
         LocalDateTime now = LocalDateTime.now();
-        Duration timeRemaining = Duration.between(now, deadline);
-        long hoursRemaining = timeRemaining.toHours();
+        long hoursRemaining = Duration.between(now, deadline).toHours();
 
         if (hoursRemaining < 0) {
-            return 100; // CRITICAL - past deadline
+            return 100;
         } else if (hoursRemaining < 1) {
-            return 95; // Urgent - less than 1 hour
+            return 95;
         } else if (hoursRemaining < 2) {
-            return 90; // Very high - less than 2 hours
+            return 90;
         } else if (hoursRemaining < 4) {
-            return 80; // High - less than 4 hours
+            return 80;
         } else if (hoursRemaining < 8) {
-            return 70; // Medium-high - less than 8 hours
+            return 70;
         } else if (hoursRemaining < 24) {
-            return 60; // Medium - same day
+            return 60;
         } else if (hoursRemaining < 48) {
-            return 40; // Lower - next day
+            return 40;
         } else {
-            return 20; // Low - 2+ days
+            return 20;
         }
     }
 
-    /**
-     * Carrier Cutoff Score - proximity to carrier pickup time
-     */
-    private int calculateCutoffScore(Task task) {
-        LocalDateTime carrierCutoff = task.getCarrierCutoffTime();
+    private int calculateCutoffScore(WorkTask task) {
+        LocalDateTime carrierCutoff = getCarrierCutoffTime(task);
         if (carrierCutoff == null) {
-            return 30; // Default if no cutoff specified
+            return 30;
         }
 
         LocalDateTime now = LocalDateTime.now();
-        Duration timeUntilCutoff = Duration.between(now, carrierCutoff);
-        long minutesRemaining = timeUntilCutoff.toMinutes();
+        long minutesRemaining = Duration.between(now, carrierCutoff).toMinutes();
 
         if (minutesRemaining < 0) {
-            return 100; // CRITICAL - missed cutoff
+            return 100;
         } else if (minutesRemaining < 30) {
-            return 95; // Very urgent - less than 30 minutes
+            return 95;
         } else if (minutesRemaining < 60) {
-            return 90; // Urgent - less than 1 hour
+            return 90;
         } else if (minutesRemaining < 120) {
-            return 80; // High - less than 2 hours
+            return 80;
         } else if (minutesRemaining < 240) {
-            return 70; // Medium-high - less than 4 hours
+            return 70;
         } else if (minutesRemaining < 480) {
-            return 50; // Medium - less than 8 hours
+            return 50;
         } else {
-            return 20; // Low - plenty of time
+            return 20;
         }
     }
 
-    /**
-     * Customer Tier Score - based on customer importance
-     */
-    private int calculateCustomerScore(Task task) {
-        String customerTier = task.getCustomerTier();
+    private int calculateCustomerScore(WorkTask task) {
+        String customerTier = getCustomerTier(task);
         if (customerTier == null) {
-            return 50; // Default for unknown tier
+            return 50;
         }
 
-        return switch (customerTier.toUpperCase()) {
-            case "PLATINUM" -> 100; // VIP customers
-            case "GOLD" -> 85; // Premium customers
-            case "SILVER" -> 70; // Valued customers
-            case "BRONZE" -> 55; // Regular customers
-            case "STANDARD" -> 40; // Standard customers
-            default -> 50; // Unknown tier
+        String normalized = customerTier.trim().toUpperCase(Locale.ENGLISH);
+        return switch (normalized) {
+            case "PLATINUM" -> 100;
+            case "GOLD" -> 85;
+            case "SILVER" -> 70;
+            case "BRONZE" -> 55;
+            case "STANDARD" -> 40;
+            default -> {
+                double multiplier = CUSTOMER_TIER_MULTIPLIERS.getOrDefault(normalized, 1.0);
+                yield (int) Math.round(50 * multiplier);
+            }
         };
     }
 
-    /**
-     * Zone Efficiency Score - prefer tasks in active/hot zones
-     */
-    private int calculateZoneScore(Task task) {
+    private int calculateZoneScore(WorkTask task) {
         String zone = task.getZone();
-        if (zone == null) {
-            return 50; // Default
+        if (zone == null || zone.isBlank()) {
+            return 50;
         }
 
-        // In real implementation, this would query active zone metrics
-        // For now, simple heuristic based on zone naming
-        if (zone.startsWith("PICK-A") || zone.startsWith("ZONE-A")) {
-            return 90; // Hot zone - high traffic
-        } else if (zone.startsWith("PICK-B") || zone.startsWith("ZONE-B")) {
-            return 70; // Warm zone
-        } else if (zone.startsWith("PICK-C") || zone.startsWith("ZONE-C")) {
-            return 50; // Normal zone
+        String normalized = zone.toUpperCase(Locale.ENGLISH);
+        if (normalized.startsWith("PICK-A") || normalized.startsWith("ZONE-A")) {
+            return 90;
+        } else if (normalized.startsWith("PICK-B") || normalized.startsWith("ZONE-B")) {
+            return 70;
+        } else if (normalized.startsWith("PICK-C") || normalized.startsWith("ZONE-C")) {
+            return 50;
         } else {
-            return 30; // Low traffic zone
+            return 30;
         }
     }
 
-    /**
-     * Age Score - older tasks get priority boost
-     */
-    private int calculateAgeScore(Task task) {
+    private int calculateAgeScore(WorkTask task) {
         LocalDateTime createdAt = task.getCreatedAt();
         if (createdAt == null) {
             return 0;
         }
 
-        Duration age = Duration.between(createdAt, LocalDateTime.now());
-        long hoursOld = age.toHours();
+        long hoursOld = Duration.between(createdAt, LocalDateTime.now()).toHours();
 
         if (hoursOld > 24) {
-            return 100; // Very old task
+            return 100;
         } else if (hoursOld > 12) {
-            return 80; // Old task
+            return 80;
         } else if (hoursOld > 6) {
-            return 60; // Moderate age
+            return 60;
         } else if (hoursOld > 2) {
-            return 40; // Recent
+            return 40;
         } else {
-            return 20; // Fresh
+            return 20;
         }
     }
 
-    /**
-     * Apply task type specific modifiers
-     */
     private int applyTaskTypeModifier(int baseScore, TaskType taskType) {
         if (taskType == null) {
             return baseScore;
         }
 
         return switch (taskType) {
-            case CYCLE_COUNT -> (int) (baseScore * 0.6); // Lower priority
-            case REPLENISHMENT -> (int) (baseScore * 0.8); // Medium-low priority
-            case PICKING -> baseScore; // Normal priority
-            case PUTAWAY -> (int) (baseScore * 1.1); // Slightly higher (free up receiving)
-            case MOVE -> (int) (baseScore * 0.7); // Lower priority
-            default -> baseScore;
+            case COUNT -> (int) (baseScore * 0.6);
+            case REPLENISH -> (int) (baseScore * 0.8);
+            case PICK -> baseScore;
+            case PACK -> (int) (baseScore * 0.9);
+            case PUTAWAY -> (int) (baseScore * 1.1);
+            case MOVE -> (int) (baseScore * 0.7);
+            case SHIP -> (int) (baseScore * 1.2);
         };
     }
 
     /**
-     * Calculate dynamic priority that adjusts over time
+     * Calculate dynamic priority that adjusts over time based on contextual signals.
      */
-    public int calculateDynamicPriority(Task task, Map<String, Object> context) {
+    public int calculateDynamicPriority(WorkTask task, Map<String, Object> context) {
         int baseScore = calculatePriority(task);
 
-        // Apply contextual boosts
         if (context != null) {
-            // Boost if operator is already in same zone
             if (Boolean.TRUE.equals(context.get("operatorInSameZone"))) {
                 baseScore = (int) (baseScore * 1.15);
             }
-
-            // Boost if part of batch pick
             if (Boolean.TRUE.equals(context.get("partOfBatch"))) {
                 baseScore = (int) (baseScore * 1.1);
             }
-
-            // Reduce if wave is not yet released
             if (Boolean.FALSE.equals(context.get("waveReleased"))) {
                 baseScore = (int) (baseScore * 0.5);
             }
-
-            // Boost for shortage/exception resolution
             if (Boolean.TRUE.equals(context.get("resolvingException"))) {
                 baseScore = (int) (baseScore * 1.3);
+            }
+
+            Object surgeLevel = context.get("systemSurgeLevel");
+            if (surgeLevel instanceof Number number) {
+                baseScore = (int) (baseScore * (1 + Math.min(number.doubleValue(), 3.0) * 0.05));
             }
         }
 
@@ -275,19 +259,14 @@ public class TaskPriorityCalculator {
     }
 
     /**
-     * Recommend priority adjustments based on system load
+     * Recommend priority adjustments based on current score and system load.
      */
-    public PriorityAdjustment recommendAdjustment(
-            Task task,
-            SystemLoadMetrics loadMetrics) {
-
-        int currentPriority = task.getPriority();
+    public PriorityAdjustment recommendAdjustment(WorkTask task, SystemLoadMetrics loadMetrics) {
+        int currentPriority = priorityToScore(task.getPriority());
         int calculatedPriority = calculatePriority(task);
 
-        // Check if priority should be adjusted
         if (Math.abs(currentPriority - calculatedPriority) > 50) {
-            String reason = buildAdjustmentReason(task, loadMetrics);
-
+            String reason = buildAdjustmentReason(task, loadMetrics, calculatedPriority);
             return new PriorityAdjustment(
                     task.getTaskId(),
                     currentPriority,
@@ -306,41 +285,135 @@ public class TaskPriorityCalculator {
         );
     }
 
-    /**
-     * Build reason for priority adjustment
-     */
-    private String buildAdjustmentReason(Task task, SystemLoadMetrics loadMetrics) {
+    private String buildAdjustmentReason(WorkTask task, SystemLoadMetrics loadMetrics, int calculatedPriority) {
         StringBuilder reason = new StringBuilder("Priority adjustment recommended: ");
 
-        LocalDateTime deadline = task.getRequiredCompletionTime();
+        LocalDateTime deadline = task.getDeadline();
         if (deadline != null) {
-            Duration timeRemaining = Duration.between(LocalDateTime.now(), deadline);
-            if (timeRemaining.toHours() < 2) {
+            long hoursRemaining = Duration.between(LocalDateTime.now(), deadline).toHours();
+            if (hoursRemaining < 2) {
                 reason.append("Approaching SLA deadline. ");
             }
         }
 
-        LocalDateTime cutoff = task.getCarrierCutoffTime();
+        LocalDateTime cutoff = getCarrierCutoffTime(task);
         if (cutoff != null) {
-            Duration timeToCutoff = Duration.between(LocalDateTime.now(), cutoff);
-            if (timeToCutoff.toHours() < 1) {
+            long minutesRemaining = Duration.between(LocalDateTime.now(), cutoff).toMinutes();
+            if (minutesRemaining < 60) {
                 reason.append("Carrier cutoff imminent. ");
             }
         }
 
-        if (task.isExpress()) {
-            reason.append("Express shipment. ");
+        if (isExpress(task)) {
+            reason.append("Express handling required. ");
         }
 
-        if ("PLATINUM".equals(task.getCustomerTier())) {
-            reason.append("VIP customer. ");
+        String customerTier = getCustomerTier(task);
+        if ("PLATINUM".equalsIgnoreCase(customerTier) || "GOLD".equalsIgnoreCase(customerTier)) {
+            reason.append("High value customer. ");
         }
 
-        return reason.toString();
+        if (loadMetrics != null) {
+            if (loadMetrics.getQueueDepth() > 10) {
+                reason.append("High queue depth. ");
+            }
+            if (loadMetrics.getActiveOperators() < 2) {
+                reason.append("Operator shortage. ");
+            }
+            if (calculatedPriority > currentSystemBaseline(loadMetrics)) {
+                reason.append("Calculated priority above system baseline. ");
+            }
+        }
+
+        return reason.toString().trim();
+    }
+
+    private int currentSystemBaseline(SystemLoadMetrics loadMetrics) {
+        if (loadMetrics == null) {
+            return 500;
+        }
+        int base = 500;
+        base += Math.min(loadMetrics.getQueueDepth(), 20) * 5;
+        base -= Math.min(loadMetrics.getActiveOperators(), 10) * 10;
+        base += (int) Math.min(loadMetrics.getAverageTaskTime() * 2, 100);
+        return Math.max(200, Math.min(900, base));
+    }
+
+    private boolean isExpress(WorkTask task) {
+        Map<String, Object> metadata = metadata(task);
+
+        Object expressFlag = metadata.get("express");
+        if (expressFlag == null) {
+            expressFlag = metadata.get("isExpress");
+        }
+
+        if (expressFlag instanceof Boolean bool) {
+            return bool;
+        }
+        if (expressFlag instanceof String string) {
+            return Boolean.parseBoolean(string);
+        }
+
+        Priority priority = task.getPriority();
+        return priority != null && priority.isExpedited();
+    }
+
+    private LocalDateTime getCarrierCutoffTime(WorkTask task) {
+        Object value = metadata(task).get("carrierCutoffTime");
+        if (value instanceof LocalDateTime ldt) {
+            return ldt;
+        }
+        if (value instanceof String str && !str.isBlank()) {
+            try {
+                return LocalDateTime.parse(str, ISO_DATE_TIME);
+            } catch (DateTimeParseException ignored) {
+                logger.debug("Unable to parse carrierCutoffTime '{}' for task {}", str, task.getTaskId());
+            }
+        }
+        return null;
+    }
+
+    private String getCustomerTier(WorkTask task) {
+        Object value = metadata(task).get("customerTier");
+        if (value instanceof String str && !str.isBlank()) {
+            return str;
+        }
+
+        Priority priority = task.getPriority();
+        if (priority != null && priority.isExpedited()) {
+            return "PLATINUM";
+        }
+        return null;
+    }
+
+    private int priorityToScore(Priority priority) {
+        if (priority == null) {
+            return 450;
+        }
+
+        return switch (priority) {
+            case CRITICAL -> 900;
+            case URGENT -> 750;
+            case HIGH -> 600;
+            case NORMAL -> 450;
+            case LOW -> 300;
+        };
+    }
+
+    private Map<String, Object> metadata(WorkTask task) {
+        if (task == null) {
+            return Collections.emptyMap();
+        }
+        TaskContext context = task.getContext();
+        if (context == null) {
+            return Collections.emptyMap();
+        }
+        Map<String, Object> metadata = context.getMetadata();
+        return metadata != null ? metadata : Collections.emptyMap();
     }
 
     /**
-     * Priority adjustment recommendation
+     * Priority adjustment recommendation DTO.
      */
     public static class PriorityAdjustment {
         private final String taskId;
@@ -349,14 +422,18 @@ public class TaskPriorityCalculator {
         private final boolean shouldAdjust;
         private final String reason;
 
-        public PriorityAdjustment(String taskId, int currentPriority,
-                                  int recommendedPriority, boolean shouldAdjust, String reason) {
+        public PriorityAdjustment(String taskId,
+                                  int currentPriority,
+                                  int recommendedPriority,
+                                  boolean shouldAdjust,
+                                  String reason) {
             this.taskId = taskId;
             this.currentPriority = currentPriority;
             this.recommendedPriority = recommendedPriority;
             this.shouldAdjust = shouldAdjust;
             this.reason = reason;
         }
+
 
         public String getTaskId() {
             return taskId;
@@ -380,7 +457,7 @@ public class TaskPriorityCalculator {
     }
 
     /**
-     * System load metrics for priority calculations
+     * Snapshot of system load metrics used when making priority recommendations.
      */
     public static class SystemLoadMetrics {
         private final int queueDepth;
@@ -388,8 +465,10 @@ public class TaskPriorityCalculator {
         private final double averageTaskTime;
         private final Map<String, Integer> tasksByZone;
 
-        public SystemLoadMetrics(int queueDepth, int activeOperators,
-                                 double averageTaskTime, Map<String, Integer> tasksByZone) {
+        public SystemLoadMetrics(int queueDepth,
+                                 int activeOperators,
+                                 double averageTaskTime,
+                                 Map<String, Integer> tasksByZone) {
             this.queueDepth = queueDepth;
             this.activeOperators = activeOperators;
             this.averageTaskTime = averageTaskTime;

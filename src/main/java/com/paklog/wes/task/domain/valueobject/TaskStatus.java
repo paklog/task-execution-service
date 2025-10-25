@@ -91,6 +91,8 @@ public enum TaskStatus {
             throw new IllegalStateException(
                     String.format("Cannot transition from %s to %s", this, newStatus)
             );
-        }
-    }
+        
+
+}
+}
 }
