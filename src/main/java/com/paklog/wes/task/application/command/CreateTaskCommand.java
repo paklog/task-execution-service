@@ -1,6 +1,6 @@
 package com.paklog.wes.task.application.command;
 
-import com.paklog.domain.valueobject.Priority;
+import com.paklog.task.execution.domain.valueobject.Priority;
 import com.paklog.wes.task.domain.entity.TaskContext;
 import com.paklog.wes.task.domain.valueobject.Location;
 import com.paklog.wes.task.domain.valueobject.TaskType;

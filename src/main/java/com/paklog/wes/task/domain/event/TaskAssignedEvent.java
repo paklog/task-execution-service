@@ -1,18 +1,21 @@
 package com.paklog.wes.task.domain.event;
 
-import com.paklog.domain.shared.DomainEvent;
+import com.paklog.task.execution.domain.shared.DomainEvent;
 import com.paklog.wes.task.domain.valueobject.TaskType;
+
+import java.time.Instant;
 
 /**
  * Event published when a task is assigned to a worker
  */
-public class TaskAssignedEvent extends DomainEvent {
+public class TaskAssignedEvent implements DomainEvent {
 
     private final String taskId;
     private final TaskType type;
     private final String assignedTo;
     private final String warehouseId;
     private final String zone;
+    private final Instant occurredOn;
 
     public TaskAssignedEvent(
             String taskId,
@@ -21,12 +24,12 @@ public class TaskAssignedEvent extends DomainEvent {
             String warehouseId,
             String zone
     ) {
-        super();
         this.taskId = taskId;
         this.type = type;
         this.assignedTo = assignedTo;
         this.warehouseId = warehouseId;
         this.zone = zone;
+        this.occurredOn = Instant.now();
     }
 
     public String getTaskId() {
@@ -47,5 +50,15 @@ public class TaskAssignedEvent extends DomainEvent {
 
     public String getZone() {
         return zone;
+    }
+
+    @Override
+    public Instant occurredOn() {
+        return occurredOn;
+    }
+
+    @Override
+    public String eventType() {
+        return "TaskAssigned";
     }
 }

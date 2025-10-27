@@ -1,7 +1,7 @@
 package com.paklog.wes.task.adapter.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.paklog.domain.valueobject.Priority;
+import com.paklog.task.execution.domain.valueobject.Priority;
 import com.paklog.wes.task.adapter.rest.dto.RejectTaskRequest;
 import com.paklog.wes.task.application.service.TaskManagementService;
 import com.paklog.wes.task.domain.aggregate.WorkTask;

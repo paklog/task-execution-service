@@ -1,6 +1,6 @@
 package com.paklog.wes.task.infrastructure.assignment;
 
-import com.paklog.domain.valueobject.Priority;
+import com.paklog.task.execution.domain.valueobject.Priority;
 import com.paklog.wes.task.domain.valueobject.TaskType;
 
 /**
