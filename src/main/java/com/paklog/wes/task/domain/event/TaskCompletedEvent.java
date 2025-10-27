@@ -1,14 +1,15 @@
 package com.paklog.wes.task.domain.event;
 
-import com.paklog.domain.shared.DomainEvent;
+import com.paklog.task.execution.domain.shared.DomainEvent;
 import com.paklog.wes.task.domain.valueobject.TaskType;
 
 import java.time.Duration;
+import java.time.Instant;
 
 /**
  * Event published when a task is completed successfully
  */
-public class TaskCompletedEvent extends DomainEvent {
+public class TaskCompletedEvent implements DomainEvent {
 
     private final String taskId;
     private final TaskType type;
@@ -17,6 +18,7 @@ public class TaskCompletedEvent extends DomainEvent {
     private final String referenceId;
     private final Duration actualDuration;
     private final boolean completedOnTime;
+    private final Instant occurredOn;
 
     public TaskCompletedEvent(
             String taskId,
@@ -27,7 +29,6 @@ public class TaskCompletedEvent extends DomainEvent {
             Duration actualDuration,
             boolean completedOnTime
     ) {
-        super();
         this.taskId = taskId;
         this.type = type;
         this.completedBy = completedBy;
@@ -35,6 +36,7 @@ public class TaskCompletedEvent extends DomainEvent {
         this.referenceId = referenceId;
         this.actualDuration = actualDuration;
         this.completedOnTime = completedOnTime;
+        this.occurredOn = Instant.now();
     }
 
     public String getTaskId() {
@@ -63,5 +65,15 @@ public class TaskCompletedEvent extends DomainEvent {
 
     public boolean isCompletedOnTime() {
         return completedOnTime;
+    }
+
+    @Override
+    public Instant occurredOn() {
+        return occurredOn;
+    }
+
+    @Override
+    public String eventType() {
+        return "TaskCompleted";
     }
 }

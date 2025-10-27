@@ -1,12 +1,14 @@
 package com.paklog.wes.task.domain.event;
 
-import com.paklog.domain.shared.DomainEvent;
+import com.paklog.task.execution.domain.shared.DomainEvent;
 import com.paklog.wes.task.domain.valueobject.TaskType;
+
+import java.time.Instant;
 
 /**
  * Event published when a task fails
  */
-public class TaskFailedEvent extends DomainEvent {
+public class TaskFailedEvent implements DomainEvent {
 
     private final String taskId;
     private final TaskType type;
@@ -14,6 +16,7 @@ public class TaskFailedEvent extends DomainEvent {
     private final String warehouseId;
     private final String referenceId;
     private final String failureReason;
+    private final Instant occurredOn;
 
     public TaskFailedEvent(
             String taskId,
@@ -23,13 +26,13 @@ public class TaskFailedEvent extends DomainEvent {
             String referenceId,
             String failureReason
     ) {
-        super();
         this.taskId = taskId;
         this.type = type;
         this.failedBy = failedBy;
         this.warehouseId = warehouseId;
         this.referenceId = referenceId;
         this.failureReason = failureReason;
+        this.occurredOn = Instant.now();
     }
 
     public String getTaskId() {
@@ -54,5 +57,15 @@ public class TaskFailedEvent extends DomainEvent {
 
     public String getFailureReason() {
         return failureReason;
+    }
+
+    @Override
+    public Instant occurredOn() {
+        return occurredOn;
+    }
+
+    @Override
+    public String eventType() {
+        return "TaskFailed";
     }
 }

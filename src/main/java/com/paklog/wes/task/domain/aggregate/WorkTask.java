@@ -1,8 +1,8 @@
 package com.paklog.wes.task.domain.aggregate;
 
-import com.paklog.domain.annotation.AggregateRoot;
-import com.paklog.domain.shared.DomainEvent;
-import com.paklog.domain.valueobject.Priority;
+import com.paklog.task.execution.domain.shared.AggregateRoot;
+import com.paklog.task.execution.domain.shared.DomainEvent;
+import com.paklog.task.execution.domain.valueobject.Priority;
 import com.paklog.wes.task.domain.entity.TaskContext;
 import com.paklog.wes.task.domain.event.TaskAssignedEvent;
 import com.paklog.wes.task.domain.event.TaskCompletedEvent;

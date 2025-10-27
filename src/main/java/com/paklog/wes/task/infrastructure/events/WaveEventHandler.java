@@ -1,6 +1,6 @@
 package com.paklog.wes.task.infrastructure.events;
 
-import com.paklog.domain.valueobject.Priority;
+import com.paklog.task.execution.domain.valueobject.Priority;
 import com.paklog.wes.task.application.command.CreateTaskCommand;
 import com.paklog.wes.task.application.service.TaskManagementService;
 import com.paklog.wes.task.domain.entity.PickTaskContext;
