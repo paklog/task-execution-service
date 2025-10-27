@@ -44,6 +44,7 @@ com/paklog/wes/task/adapter/rest/dto/ErrorResponse.class
 com/paklog/wes/task/domain/entity/PickTaskContext$PickStrategy.class
 com/paklog/wes/task/infrastructure/queue/TaskQueueManager.class
 com/paklog/wes/task/domain/entity/TaskContext.class
+com/paklog/task/execution/application/service/DomainEventPublisher.class
 com/paklog/wes/task/adapter/rest/dto/FailTaskRequest.class
 com/paklog/wes/task/domain/event/TaskCompletedEvent.class
 com/paklog/task/execution/domain/shared/AggregateRoot.class

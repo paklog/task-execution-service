@@ -11,6 +11,7 @@
 /Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/wes/task/domain/repository/WorkTaskRepository.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/wes/task/domain/entity/MoveTaskContext.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/wes/task/domain/event/TaskCompletedEvent.java
+/Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/task/execution/application/service/DomainEventPublisher.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/wes/task/infrastructure/queue/TaskQueueManager.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/wes/task/adapter/rest/dto/RejectTaskRequest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/main/java/com/paklog/wes/task/infrastructure/assignment/TaskAssignmentEngine.java

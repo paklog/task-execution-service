@@ -1,5 +1,6 @@
 package com.paklog.wes.task.application.service;
 
+import com.paklog.task.execution.application.service.DomainEventPublisher;
 import com.paklog.wes.task.application.command.CreateTaskCommand;
 import com.paklog.wes.task.domain.aggregate.WorkTask;
 import com.paklog.wes.task.domain.repository.WorkTaskRepository;
@@ -24,10 +25,15 @@ public class TaskManagementService {
 
     private final WorkTaskRepository taskRepository;
     private final TaskQueueManager queueManager;
+    private final DomainEventPublisher domainEventPublisher;
 
-    public TaskManagementService(WorkTaskRepository taskRepository, TaskQueueManager queueManager) {
+    public TaskManagementService(
+            WorkTaskRepository taskRepository,
+            TaskQueueManager queueManager,
+            DomainEventPublisher domainEventPublisher) {
         this.taskRepository = taskRepository;
         this.queueManager = queueManager;
+        this.domainEventPublisher = domainEventPublisher;
     }
 
     /**
@@ -58,6 +64,9 @@ public class TaskManagementService {
         // Add to Redis queue for assignment
         queueManager.enqueue(savedTask);
 
+        // Publish domain events as CloudEvents
+        domainEventPublisher.publishDomainEvents(savedTask);
+
         logger.info("Task created and queued: taskId={}", savedTask.getTaskId());
         return savedTask;
     }
@@ -76,6 +85,9 @@ public class TaskManagementService {
 
         // Remove from queue since it's now assigned
         queueManager.remove(savedTask);
+
+        // Publish domain events as CloudEvents
+        domainEventPublisher.publishDomainEvents(savedTask);
 
         logger.info("Task assigned successfully: taskId={}, workerId={}", taskId, workerId);
 
@@ -145,6 +157,10 @@ public class TaskManagementService {
         task.complete();
 
         WorkTask savedTask = taskRepository.save(task);
+
+        // Publish domain events as CloudEvents
+        domainEventPublisher.publishDomainEvents(savedTask);
+
         logger.info("Task completed: taskId={}, duration={}", taskId, task.getActualDuration());
 
         return savedTask;

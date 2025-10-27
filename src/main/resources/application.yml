@@ -21,14 +21,55 @@ spring:
   # Kafka Configuration
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+
+    # Producer Configuration for CloudEvents
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
-      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      value-serializer: io.cloudevents.kafka.CloudEventSerializer
+      properties:
+        # CloudEvent content mode: structured or binary
+        cloudevents.content.mode: structured
+        # Enable idempotence for exactly-once semantics
+        enable.idempotence: true
+        acks: all
+        retries: 3
+        # Compression
+        compression.type: snappy
+        # Batching
+        linger.ms: 10
+        batch.size: 16384
+
+    # Consumer Configuration for CloudEvents
     consumer:
-      group-id: task-execution-group
+      group-id: task-execution-service
       auto-offset-reset: earliest
+      enable-auto-commit: false
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      value-deserializer: io.cloudevents.kafka.CloudEventDeserializer
+      properties:
+        # CloudEvent content mode
+        cloudevents.content.mode: structured
+        # Concurrency
+        max.poll.records: 100
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 45000
+        heartbeat.interval.ms: 3000
+
+    # Listener Configuration
+    listener:
+      ack-mode: manual
+      concurrency: 3
+      # Error handling
+      type: batch
+
+    # Topic Configuration
+    template:
+      default-topic: task-events
+
+    # Topics
+    topics:
+      task-events: task-events
+      wave-events: wave-events
 
   # Spring MVC Configuration
   mvc:
@@ -43,8 +84,10 @@ logging:
   level:
     root: INFO
     com.paklog.wes.task: DEBUG
+    com.paklog.task.execution: DEBUG
     org.springframework.kafka: WARN
     org.mongodb.driver: WARN
+    io.cloudevents: DEBUG
 
 # Application-specific Configuration
 task:

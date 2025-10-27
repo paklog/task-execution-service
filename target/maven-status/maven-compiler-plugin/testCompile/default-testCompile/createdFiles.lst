@@ -5,11 +5,13 @@ com/paklog/wes/task/adapter/rest/dto/DtoMappingTest.class
 com/paklog/wes/task/domain/valueobject/LocationTest.class
 com/paklog/wes/task/adapter/rest/TaskControllerTest.class
 com/paklog/wes/task/infrastructure/assignment/TaskAssignmentEngineTest.class
+com/paklog/task/execution/infrastructure/events/WaveEventConsumerTest.class
 com/paklog/wes/task/domain/aggregate/WorkTaskTest.class
 com/paklog/wes/task/domain/service/TaskPriorityCalculatorTest.class
 com/paklog/wes/task/domain/entity/TaskContextVariantsTest.class
 com/paklog/wes/task/infrastructure/queue/TaskQueueManagerIntegrationTest.class
 com/paklog/wes/task/domain/repository/WorkTaskRepositoryIntegrationTest$SimpleContext.class
+com/paklog/task/execution/infrastructure/events/DomainEventPublisherTest.class
 com/paklog/wes/task/adapter/rest/mapper/TaskContextMapperTest.class
 com/paklog/wes/task/infrastructure/queue/TaskQueueManagerIntegrationTest$RedisTestConfig.class
 com/paklog/wes/task/domain/repository/WorkTaskRepositoryIntegrationTest.class

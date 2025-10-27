@@ -1,5 +1,6 @@
 package com.paklog.wes.task.application.service;
 
+import com.paklog.task.execution.application.service.DomainEventPublisher;
 import com.paklog.task.execution.domain.valueobject.Priority;
 import com.paklog.wes.task.application.command.CreateTaskCommand;
 import com.paklog.wes.task.domain.aggregate.WorkTask;
@@ -35,6 +36,9 @@ class TaskManagementServiceTest {
 
     @Mock
     private TaskQueueManager queueManager;
+
+    @Mock
+    private DomainEventPublisher domainEventPublisher;
 
     @InjectMocks
     private TaskManagementService service;

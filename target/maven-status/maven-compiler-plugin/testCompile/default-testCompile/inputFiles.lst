@@ -1,8 +1,10 @@
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/infrastructure/assignment/TaskRecommendationTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/domain/valueobject/TaskTypeTest.java
+/Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/task/execution/infrastructure/events/WaveEventConsumerTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/adapter/rest/TaskControllerTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/application/service/TaskManagementServiceTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/domain/entity/TaskContextVariantsTest.java
+/Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/task/execution/infrastructure/events/DomainEventPublisherTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/infrastructure/queue/TaskQueueManagerIntegrationTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/domain/valueobject/TaskStatusTest.java
 /Users/claudioed/development/github/paklog/task-execution-service/src/test/java/com/paklog/wes/task/domain/aggregate/WorkTaskTest.java
